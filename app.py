@@ -133,10 +133,12 @@ def manage_licenses():
     # Format exempted users in this run
     exempted_in_run = "\n".join([f"• {email}" for email in exempted_users]) if 'exempted_users' in locals() and exempted_users else "• None"
     
+    current_time = datetime.now()
     summary = f"""
 <b>📊 License Management Summary</b>
 ==========================
-📅 <b>Date:</b> {datetime.now().strftime('%Y-%m-%d')}
+📅 <b>Date:</b> {current_time.strftime('%Y-%m-%d')}
+⏰ <b>Time:</b> {current_time.strftime('%H:%M:%S %Z')}
 
 <b>🔴 Unassigned:</b> {success_unassign}/{total_unassigned}
 <b>🟢 Assigned:</b> {success_assign}/{total_assigned}
