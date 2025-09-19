@@ -1,7 +1,7 @@
 import requests
 from getschedule import get_email_schedule
 from day_utils import get_day_info, get_day_schedule
-from assign import assign_license
+from assign import assign_license, get_license_usage
 from unassign import unassign_license
 from config import Config
 import time
@@ -111,6 +111,9 @@ def manage_licenses():
     else:
         print("\nℹ️ No new users to assign licenses to today.")
     
+    # Get license usage information
+    license_info = get_license_usage()
+    
     # Prepare summary message
     total_unassigned = len(emails_to_unassign)
     total_assigned = len(emails_to_assign)
@@ -134,6 +137,18 @@ def manage_licenses():
     exempted_in_run = "\n".join([f"• {email}" for email in exempted_users]) if 'exempted_users' in locals() and exempted_users else "• None"
     
     current_time = datetime.now()
+    # Format license info if available
+    license_summary = ""
+    if license_info:
+        license_summary = f"\n\n<b>📊 License Usage:</b>\n"
+        license_summary += f"• Total Licenses: {license_info['total_licenses']}\n"
+        license_summary += f"• Used Licenses: {license_info['used_licenses']}\n"
+        license_summary += f"• Available Licenses: {license_info['available_licenses']}\n"
+        
+        # Add warning if running low on licenses
+        if license_info['total_licenses'] > 0 and license_info['available_licenses'] / license_info['total_licenses'] < 0.1:
+            license_summary += "\n⚠️ <b>Warning: Running low on available licenses!</b>"
+    
     summary = f"""
 <b>📊 License Management Summary</b>
 ==========================
@@ -142,6 +157,7 @@ def manage_licenses():
 
 <b>🔴 Unassigned:</b> {success_unassign}/{total_unassigned}
 <b>🟢 Assigned:</b> {success_assign}/{total_assigned}
+{license_summary}
 
 <b>🛡️ Exempt Users (Never Unassigned):</b>
 {exempt_users_list}

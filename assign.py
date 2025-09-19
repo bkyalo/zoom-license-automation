@@ -1,6 +1,7 @@
 import requests
 import base64
 from config import Config
+from typing import Dict, Optional, Tuple
 
 # Step 1: Get an access token
 def get_access_token():
@@ -36,6 +37,61 @@ def get_access_token():
         raise
 
 # Step 2: Assign license by setting type=2 (Licensed user)
+def get_license_usage():
+    """
+    Get information about license usage
+    
+    Returns:
+        dict: Dictionary containing total_licenses, used_licenses, and available_licenses
+    """
+    token = get_access_token()
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        # Get account plan information which includes license counts
+        response = requests.get(
+            f"{Config.ZOOM_API_BASE_URL}/accounts/me/plans",
+            headers=headers
+        )
+        response.raise_for_status()
+        
+        plan_data = response.json()
+        
+        # Find the plan that contains license information
+        for plan in plan_data.get('plans', []):
+            if plan.get('type') == 2:  # 2 represents the main plan with licenses
+                total_licenses = plan.get('hosts', 0)
+                break
+        else:
+            total_licenses = 0
+            
+        # Get number of active users with licenses
+        users_response = requests.get(
+            f"{Config.ZOOM_API_BASE_URL}/users?status=active&page_size=300&page_number=1",
+            headers=headers
+        )
+        users_response.raise_for_status()
+        
+        users_data = users_response.json()
+        used_licenses = sum(1 for user in users_data.get('users', []) 
+                           if user.get('type') == 2)  # Type 2 is licensed user
+        
+        return {
+            'total_licenses': total_licenses,
+            'used_licenses': used_licenses,
+            'available_licenses': max(0, total_licenses - used_licenses)
+        }
+        
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Failed to get license usage: {str(e)}")
+        if hasattr(e, 'response') and e.response is not None:
+            print(f"Status: {e.response.status_code}")
+            print(f"Response: {e.response.text}")
+        return None
+
 def assign_license(user_email, license_type=2):
     """
     Assign a Zoom license to a user
@@ -75,3 +131,11 @@ if __name__ == "__main__":
     # Example usage:
     # assign_license("user@example.com", license_type=2)  # Assign Licensed user
     assign_license(Config.DEFAULT_USER_EMAIL)
+    
+    # Example of getting license usage
+    usage = get_license_usage()
+    if usage:
+        print(f"\n📊 License Usage:")
+        print(f"Total Licenses: {usage['total_licenses']}")
+        print(f"Used Licenses: {usage['used_licenses']}")
+        print(f"Available Licenses: {usage['available_licenses']}")
