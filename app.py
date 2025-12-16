@@ -1,5 +1,5 @@
 import requests
-from getschedule import get_email_schedule
+from getschedule import get_email_schedule, check_exam_period
 from day_utils import get_day_info, get_day_schedule
 from assign import assign_license, get_license_usage
 from unassign import unassign_license
@@ -22,7 +22,7 @@ def send_telegram_message(message):
         return False
 
 def manage_licenses():
-    from datetime import datetime
+    from datetime import datetime, timedelta
     print("🚀 Starting license management...")
     print("=" * 50)
     
@@ -31,8 +31,18 @@ def manage_licenses():
     today = day_info['today']
     yesterday = day_info['yesterday']
     
-    print(f"📅 Today is: {today}")
-    print(f"📅 Yesterday was: {yesterday}")
+    # Check Exam Period Status
+    today_date = datetime.now()
+    yesterday_date = today_date - timedelta(days=1)
+    
+    is_exam_today = check_exam_period(today_date)
+    is_exam_yesterday = check_exam_period(yesterday_date)
+    
+    status_today = "Exam Period" if is_exam_today else "Teaching Period"
+    status_yesterday = "Exam Period" if is_exam_yesterday else "Teaching Period"
+    
+    print(f"📅 Today is: {today} ({status_today})")
+    print(f"📅 Yesterday was: {yesterday} ({status_yesterday})")
     
     # Initialize tracking for failed operations
     failed_unassign = []
@@ -154,6 +164,7 @@ def manage_licenses():
 ==========================
 📅 <b>Date:</b> {current_time.strftime('%Y-%m-%d')}
 ⏰ <b>Time:</b> {current_time.strftime('%H:%M:%S %Z')}
+ℹ️ <b>Status:</b> {status_today}
 
 <b>🔴 Unassigned:</b> {success_unassign}/{total_unassigned}
 <b>🟢 Assigned:</b> {success_assign}/{total_assigned}
